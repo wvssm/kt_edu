@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>고양이 계산기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #ffb3d9 0%, #ff99cc 50%, #ff80bf 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .calculator {
+            background: linear-gradient(145deg, #ffe6f2, #ffb3d9);
+            border-radius: 30px;
+            box-shadow: 0 20px 40px rgba(255, 102, 178, 0.3);
+            padding: 30px;
+            width: 380px;
+            position: relative;
+            border: 3px solid #ff80bf;
+        }
+
+        /* 고양이 캐릭터 이미지 */
+        .character-image {
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(145deg, #ffb3d9, #ff99cc);
+            border-radius: 50%;
+            border: 4px solid #ff80bf;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 15px 30px rgba(255, 102, 178, 0.4);
+            overflow: hidden;
+        }
+
+        .character-image::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cdefs%3E%3ClinearGradient id='pinkGrad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23ffb3d9;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23ff99cc;stop-opacity:1' /%3E%3C/linearGradient%3E%3ClinearGradient id='darkPinkGrad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23ff80bf;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23ff66b3;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3C!-- 고양이 몸체 --%3E%3Cellipse cx='100' cy='120' rx='45' ry='35' fill='url(%23pinkGrad)' stroke='%23ff80bf' stroke-width='2'/%3E%3C!-- 고양이 머리 --%3E%3Ccircle cx='100' cy='80' r='35' fill='url(%23pinkGrad)' stroke='%23ff80bf' stroke-width='2'/%3E%3C!-- 고양이 귀 --%3E%3Cpath d='M 75 50 L 70 35 L 80 45 Z' fill='url(%23darkPinkGrad)' stroke='%23ff4080' stroke-width='1.5'/%3E%3Cpath d='M 125 50 L 130 35 L 120 45 Z' fill='url(%23darkPinkGrad)' stroke='%23ff4080' stroke-width='1.5'/%3E%3C!-- 고양이 눈 --%3E%3Ccircle cx='85' cy='75' r='8' fill='%238b5cf6' stroke='%236d28d9' stroke-width='1'/%3E%3Ccircle cx='115' cy='75' r='8' fill='%238b5cf6' stroke='%236d28d9' stroke-width='1'/%3E%3C!-- 눈 하이라이트 --%3E%3Ccircle cx='87' cy='73' r='3' fill='white'/%3E%3Ccircle cx='117' cy='73' r='3' fill='white'/%3E%3C!-- 고양이 코 --%3E%3Cpath d='M 98 85 L 100 87 L 102 85 L 100 83 Z' fill='%23ff6b9d' stroke='%23ff4080' stroke-width='0.5'/%3E%3C!-- 고양이 입 --%3E%3Cpath d='M 95 90 Q 100 95 105 90' fill='none' stroke='%23ff4080' stroke-width='1.5'/%3E%3C!-- 고양이 수염 --%3E%3Cpath d='M 70 85 L 60 83 M 70 87 L 60 87 M 70 89 L 60 91' stroke='%23ff4080' stroke-width='1'/%3E%3Cpath d='M 130 85 L 140 83 M 130 87 L 140 87 M 130 89 L 140 91' stroke='%23ff4080' stroke-width='1'/%3E%3C!-- 고양이 목걸이 --%3E%3Crect x='70' y='105' width='60' height='8' rx='4' fill='url(%23darkPinkGrad)' stroke='%23ff4080' stroke-width='1'/%3E%3C!-- 벨 --%3E%3Ccircle cx='100' cy='109' r='3' fill='%23ffd700' stroke='%23ffb300' stroke-width='1'/%3E%3C!-- 고양이 가슴 장식 --%3E%3Ccircle cx='100' cy='95' r='8' fill='%23ffd700' stroke='%23ffb300' stroke-width='1.5'/%3E%3Ctext x='100' y='99' text-anchor='middle' fill='%23ffb300' font-size='8' font-weight='bold'%3E🐱%3C/text%3E%3C!-- 고양이 팔 --%3E%3Cpath d='M 60 110 Q 50 100 60 90' fill='url(%23pinkGrad)' stroke='%23ff80bf' stroke-width='1.5'/%3E%3Cpath d='M 140 110 Q 150 100 140 90' fill='url(%23pinkGrad)' stroke='%23ff80bf' stroke-width='1.5'/%3E%3C!-- 고양이 꼬리 --%3E%3Cpath d='M 55 130 Q 45 120 55 110 Q 65 120 55 130' fill='url(%23darkPinkGrad)' stroke='%23ff4080' stroke-width='1.5'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .display {
+            background: linear-gradient(145deg, #fff5f8, #ffe6f2);
+            border: 2px solid #ffb3d9;
+            border-radius: 20px;
+            font-size: 2.5rem;
+            font-weight: 300;
+            height: 80px;
+            margin-bottom: 25px;
+            margin-top: 20px;
+            padding: 0 20px;
+            text-align: right;
+            width: 100%;
+            color: #ff4080;
+            box-shadow: inset 0 4px 8px rgba(255, 102, 178, 0.2);
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .btn {
+            background: linear-gradient(145deg, #fff5f8, #ffe6f2);
+            border: 2px solid #ffb3d9;
+            border-radius: 20px;
+            color: #ff4080;
+            cursor: pointer;
+            font-size: 1.5rem;
+            font-weight: 600;
+            height: 60px;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 12px rgba(255, 102, 178, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(255, 102, 178, 0.3);
+            background: linear-gradient(145deg, #ffe6f2, #ffd6e7);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 8px rgba(255, 102, 178, 0.2);
+        }
+
+        .operator {
+            background: linear-gradient(145deg, #ffb3d9, #ff99cc);
+            color: white;
+            border-color: #ff80bf;
+        }
+
+        .operator:hover {
+            background: linear-gradient(145deg, #ff99cc, #ff80bf);
+        }
+
+        .equals {
+            background: linear-gradient(145deg, #ff80bf, #ff66b3);
+            color: white;
+            grid-column: span 2;
+            border-color: #ff4080;
+        }
+
+        .equals:hover {
+            background: linear-gradient(145deg, #ff66b3, #ff4080);
+        }
+
+        .clear {
+            background: linear-gradient(145deg, #ffb3d9, #ff99cc);
+            color: white;
+            border-color: #ff80bf;
+        }
+
+        .clear:hover {
+            background: linear-gradient(145deg, #ff99cc, #ff80bf);
+        }
+
+        .zero {
+            grid-column: span 2;
+        }
+
+        .title {
+            text-align: center;
+            color: #ff4080;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(255, 102, 178, 0.3);
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <div class="character-image"></div>
+        <div class="title">고양이 계산기</div>
+        <input type="text" class="display" id="display" readonly>
+        <div class="buttons">
+            <button class="btn clear" onclick="clearDisplay()">C</button>
+            <button class="btn clear" onclick="clearEntry()">CE</button>
+            <button class="btn operator" onclick="deleteLast()">⌫</button>
+            <button class="btn operator" onclick="appendToDisplay('/')">÷</button>
+            
+            <button class="btn" onclick="appendToDisplay('7')">7</button>
+            <button class="btn" onclick="appendToDisplay('8')">8</button>
+            <button class="btn" onclick="appendToDisplay('9')">9</button>
+            <button class="btn operator" onclick="appendToDisplay('*')">×</button>
+            
+            <button class="btn" onclick="appendToDisplay('4')">4</button>
+            <button class="btn" onclick="appendToDisplay('5')">5</button>
+            <button class="btn" onclick="appendToDisplay('6')">6</button>
+            <button class="btn operator" onclick="appendToDisplay('-')">-</button>
+            
+            <button class="btn" onclick="appendToDisplay('1')">1</button>
+            <button class="btn" onclick="appendToDisplay('2')">2</button>
+            <button class="btn" onclick="appendToDisplay('3')">3</button>
+            <button class="btn operator" onclick="appendToDisplay('+')">+</button>
+            
+            <button class="btn zero" onclick="appendToDisplay('0')">0</button>
+            <button class="btn" onclick="appendToDisplay('.')">.</button>
+            <button class="btn equals" onclick="calculate()">=</button>
+        </div>
+    </div>
+
+    <script>
+        const display = document.getElementById('display');
+        let currentInput = '';
+        let lastInput = '';
+        let lastOperator = '';
+        let waitingForOperand = false;
+
+        function appendToDisplay(value) {
+            if (waitingForOperand && !isOperator(value)) {
+                currentInput = value;
+                waitingForOperand = false;
+            } else {
+                currentInput += value;
+            }
+            updateDisplay();
+        }
+
+        function clearDisplay() {
+            currentInput = '';
+            lastInput = '';
+            lastOperator = '';
+            waitingForOperand = false;
+            updateDisplay();
+        }
+
+        function clearEntry() {
+            currentInput = '';
+            updateDisplay();
+        }
+
+        function deleteLast() {
+            currentInput = currentInput.slice(0, -1);
+            updateDisplay();
+        }
+
+        function isOperator(value) {
+            return ['+', '-', '*', '/', '%'].includes(value);
+        }
+
+        function updateDisplay() {
+            display.value = currentInput || '0';
+        }
+
+        function calculate() {
+            try {
+                const result = eval(currentInput);
+                
+                if (isFinite(result)) {
+                    currentInput = result.toString();
+                    if (currentInput.includes('.')) {
+                        const parts = currentInput.split('.');
+                        if (parts[1].length > 8) {
+                            currentInput = parseFloat(result).toFixed(8);
+                        }
+                    }
+                } else {
+                    currentInput = 'Error';
+                }
+            } catch (error) {
+                currentInput = 'Error';
+            }
+            
+            waitingForOperand = true;
+            updateDisplay();
+        }
+
+        // 키보드 이벤트 처리
+        document.addEventListener('keydown', function(event) {
+            const key = event.key;
+            
+            if (key >= '0' && key <= '9' || key === '.') {
+                appendToDisplay(key);
+            } else if (['+', '-', '*', '/', '%'].includes(key)) {
+                appendToDisplay(key);
+            } else if (key === 'Enter' || key === '=') {
+                calculate();
+            } else if (key === 'Escape') {
+                clearDisplay();
+            } else if (key === 'Backspace') {
+                deleteLast();
+            }
+        });
+
+        // 초기 표시
+        updateDisplay();
+    </script>
+</body>
+</html>

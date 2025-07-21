@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Angry Birds Shape Game</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #b3e0ff;
+    }
+    #gameCanvas {
+      display: block;
+      background: linear-gradient(to top, #b3e0ff 60%, #e6f7ff 100%);
+      margin: 0 auto;
+      box-shadow: 0 0 20px #333;
+    }
+    #ui {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #333;
+      font-family: Arial, sans-serif;
+      font-size: 24px;
+      text-shadow: 2px 2px 4px #fff8;
+      z-index: 10;
+      pointer-events: none;
+    }
+    #winMsg {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: 48px;
+      font-weight: bold;
+      text-shadow: 2px 2px 8px #000a;
+      display: none;
+      z-index: 20;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="960" height="540"></canvas>
+  <div id="ui">
+    <span id="levelBtns">
+      Level:
+      <button onclick="setLevel(1)">1</button>
+      <button onclick="setLevel(2)">2</button>
+      <button onclick="setLevel(3)">3</button>
+    </span>
+    &nbsp;|&nbsp;
+    Birds left: <span id="birdsLeft">3</span>
+    &nbsp;|&nbsp;
+    Score: <span id="scoreVal">0</span>
+  </div>
+  <div id="winMsg">You Win!</div>
+  <script>
+    // --- GAME CONSTANTS ---
+    const GRAVITY = 0.5;
+    const BIRD_RADIUS = 24;
+    const PIG_RADIUS = 24;
+    const BLOCK_W = 60, BLOCK_H = 24;
+    const SLING_X = 180, SLING_Y = 400;
+    const MAX_BIRDS = 3;
+    let currentLevel = 1;
+
+    // --- GAME STATE ---
+    let canvas = document.getElementById('gameCanvas');
+    let ctx = canvas.getContext('2d');
+    let birds = [];
+    let pigs = [];
+    let blocks = [];
+    let dragging = false;
+    let dragStart = null;
+    let launched = false;
+    let currentBird = null;
+    let birdsLeft = MAX_BIRDS;
+    let win = false;
+    let score = 0;
+
+    // --- LEVEL DATA ---
+    function getLevelData(level) {
+      if (level === 1) {
+        return {
+          pigs: [
+            {x: 700, y: 420},
+            {x: 800, y: 420}
+          ],
+          blocks: [
+            {x: 700, y: 460, type: 'wood'},
+            {x: 760, y: 460, type: 'stone'},
+            {x: 830, y: 460, type: 'wood'},
+            {x: 765, y: 400, type: 'wood'}
+          ]
+        };
+      } else if (level === 2) {
+        return {
+          pigs: [
+            {x: 700, y: 420},
+            {x: 800, y: 420},
+            {x: 765, y: 370}
+          ],
+          blocks: [
+            {x: 700, y: 460, type: 'stone'},
+            {x: 760, y: 460, type: 'wood'},
+            {x: 830, y: 460, type: 'stone'},
+            {x: 765, y: 400, type: 'wood'},
+            {x: 765, y: 340, type: 'stone'}
+          ]
+        };
+      } else if (level === 3) {
+        return {
+          pigs: [
+            {x: 700, y: 420},
+            {x: 800, y: 420},
+            {x: 765, y: 370},
+            {x: 765, y: 310}
+          ],
+          blocks: [
+            {x: 700, y: 460, type: 'stone'},
+            {x: 760, y: 460, type: 'stone'},
+            {x: 830, y: 460, type: 'stone'},
+            {x: 765, y: 400, type: 'wood'},
+            {x: 765, y: 340, type: 'wood'},
+            {x: 765, y: 280, type: 'stone'}
+          ]
+        };
+      }
+      // fallback
+      return getLevelData(1);
+    }
+
+    // --- GAME OBJECTS ---
+    function makeBird() {
+      return {
+        x: SLING_X,
+        y: SLING_Y,
+        vx: 0,
+        vy: 0,
+        launched: false,
+        alive: true
+      };
+    }
+    function makePig(x, y) {
+      return { x, y, vx: 0, vy: 0, alive: true };
+    }
+    function makeBlock(x, y, type) {
+      return { x, y, w: BLOCK_W, h: BLOCK_H, type, vx: 0, vy: 0, alive: true };
+    }
+
+    // --- INIT LEVEL ---
+    function resetGame(level = currentLevel) {
+      currentLevel = level;
+      birds = [];
+      pigs = [];
+      blocks = [];
+      for (let i = 0; i < MAX_BIRDS; ++i) birds.push(makeBird());
+      const data = getLevelData(level);
+      pigs = data.pigs.map(p => makePig(p.x, p.y));
+      blocks = data.blocks.map(b => makeBlock(b.x, b.y, b.type));
+      birdsLeft = MAX_BIRDS;
+      launched = false;
+      dragging = false;
+      dragStart = null;
+      currentBird = birds[0];
+      win = false;
+      score = 0;
+      document.getElementById('winMsg').style.display = 'none';
+      document.getElementById('birdsLeft').textContent = birdsLeft;
+      document.getElementById('scoreVal').textContent = score;
+      // 완전히 리셋: 모든 새, 돼지, 블록의 상태 초기화
+      for (let bird of birds) {
+        bird.x = SLING_X;
+        bird.y = SLING_Y;
+        bird.vx = 0;
+        bird.vy = 0;
+        bird.launched = false;
+        bird.alive = true;
+      }
+      for (let pig of pigs) {
+        pig.vx = 0;
+        pig.vy = 0;
+        pig.alive = true;
+      }
+      for (let block of blocks) {
+        block.vx = 0;
+        block.vy = 0;
+        block.alive = true;
+      }
+    }
+
+    // --- LEVEL SELECT ---
+    window.setLevel = function(level) {
+      resetGame(level);
+      loop(); // 강제로 한 번 더 그리기
+    }
+
+    // --- PHYSICS & GAME LOOP ---
+    function update() {
+      // Bird physics
+      for (let bird of birds) {
+        if (bird.launched && bird.alive) {
+          bird.vy += GRAVITY;
+          bird.x += bird.vx;
+          bird.y += bird.vy;
+          // 바닥 반사
+          if (bird.y + BIRD_RADIUS > 520) {
+            bird.y = 520 - BIRD_RADIUS;
+            bird.vy = -bird.vy * 0.7;
+          }
+          // 왼쪽 벽 반사
+          if (bird.x - BIRD_RADIUS < 0) {
+            bird.x = BIRD_RADIUS;
+            bird.vx = -bird.vx * 0.7;
+          }
+          // 오른쪽 벽 반사
+          if (bird.x + BIRD_RADIUS > canvas.width) {
+            bird.x = canvas.width - BIRD_RADIUS;
+            bird.vx = -bird.vx * 0.7;
+          }
+          // Out of bounds (위쪽만)
+          if (bird.y > canvas.height) bird.alive = false;
+        }
+      }
+      // Block physics: 정지 (움직이지 않음)
+      // Pig physics: 정지 (움직이지 않음)
+      // Bird-block collision (블록은 움직이지 않음, 충돌만 감지)
+      for (let bird of birds) {
+        if (!bird.launched || !bird.alive) continue;
+        for (let block of blocks) {
+          if (!block.alive) continue;
+          if (rectCircleCollide(block, bird)) {
+            // 튕김 효과: 속도를 반사 (vx, vy 모두 반전)
+            const bounce = 0.7;
+            // 충돌 방향 계산
+            let dx = bird.x - block.x;
+            let dy = bird.y - block.y;
+            if (Math.abs(dx) > Math.abs(dy)) {
+              bird.vx = -bird.vx * bounce;
+            } else {
+              bird.vy = -bird.vy * bounce;
+            }
+          }
+        }
+      }
+      // Bird-pig collision
+      for (let bird of birds) {
+        if (!bird.launched || !bird.alive) continue;
+        for (let pig of pigs) {
+          if (!pig.alive) continue;
+          if (circleCollide(bird, pig, BIRD_RADIUS, PIG_RADIUS)) {
+            pig.alive = false;
+            bird.vx *= 0.7;
+            bird.vy *= 0.7;
+            score += 100;
+            document.getElementById('scoreVal').textContent = score;
+          }
+        }
+      }
+      // Block-pig collision: 없음 (정지)
+      // Win/Lose check
+      if (!win && pigs.every(p => !p.alive)) {
+        win = true;
+        document.getElementById('winMsg').textContent = 'You Win!';
+        document.getElementById('winMsg').style.display = 'block';
+      }
+      // Lose check: 새를 모두 썼고 돼지가 남아있으면
+      if (!win && birdsLeft === 0 && pigs.some(p => p.alive)) {
+        win = true;
+        document.getElementById('winMsg').textContent = 'You Lose!';
+        document.getElementById('winMsg').style.display = 'block';
+      }
+    }
+
+    // --- COLLISION HELPERS ---
+    function rectCircleCollide(rect, circ) {
+      let dx = Math.abs(circ.x - rect.x);
+      let dy = Math.abs(circ.y - rect.y);
+      if (dx > (rect.w/2 + BIRD_RADIUS)) return false;
+      if (dy > (rect.h/2 + BIRD_RADIUS)) return false;
+      if (dx <= (rect.w/2)) return true;
+      if (dy <= (rect.h/2)) return true;
+      let corner = (dx-rect.w/2)**2 + (dy-rect.h/2)**2;
+      return (corner <= (BIRD_RADIUS**2));
+    }
+    function circleCollide(a, b, ra, rb) {
+      let dx = a.x - b.x, dy = a.y - b.y;
+      return (dx*dx + dy*dy) < (ra+rb)*(ra+rb);
+    }
+
+    // --- RENDER ---
+    function draw() {
+      // BG
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // Ground
+      ctx.fillStyle = '#6b8e23';
+      ctx.fillRect(0, 520, canvas.width, 20);
+      // Blocks
+      for (let block of blocks) {
+        if (!block.alive) continue;
+        ctx.save();
+        ctx.translate(block.x, block.y);
+        ctx.fillStyle = block.type === 'wood' ? '#b97a56' : '#888';
+        ctx.strokeStyle = block.type === 'wood' ? '#8b5c2d' : '#555';
+        ctx.lineWidth = 2;
+        ctx.fillRect(-block.w/2, -block.h/2, block.w, block.h);
+        ctx.strokeRect(-block.w/2, -block.h/2, block.w, block.h);
+        ctx.restore();
+      }
+      // Pigs
+      for (let pig of pigs) {
+        if (!pig.alive) continue;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(pig.x, pig.y, PIG_RADIUS, 0, Math.PI*2);
+        ctx.fillStyle = '#4caf50';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#2e7d32';
+        ctx.stroke();
+        ctx.restore();
+        // Pig face
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(pig.x, pig.y+5, 8, 0, Math.PI*2);
+        ctx.fillStyle = '#aeea00';
+        ctx.fill();
+        ctx.restore();
+      }
+      // Birds
+      for (let bird of birds) {
+        if (!bird.alive) continue;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(bird.x, bird.y, BIRD_RADIUS, 0, Math.PI*2);
+        ctx.fillStyle = '#e53935';
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#b71c1c';
+        ctx.stroke();
+        // Angry eyes
+        ctx.beginPath();
+        ctx.arc(bird.x-7, bird.y-5, 6, 0, Math.PI*2);
+        ctx.arc(bird.x+7, bird.y-5, 6, 0, Math.PI*2);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(bird.x-7, bird.y-5, 2, 0, Math.PI*2);
+        ctx.arc(bird.x+7, bird.y-5, 2, 0, Math.PI*2);
+        ctx.fillStyle = '#222';
+        ctx.fill();
+        // Eyebrows
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(bird.x-13, bird.y-13);
+        ctx.lineTo(bird.x-1, bird.y-10);
+        ctx.moveTo(bird.x+1, bird.y-10);
+        ctx.lineTo(bird.x+13, bird.y-13);
+        ctx.stroke();
+        ctx.restore();
+      }
+      // Slingshot
+      ctx.save();
+      ctx.strokeStyle = '#8B4513';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(SLING_X-15, SLING_Y+40);
+      ctx.lineTo(SLING_X-15, SLING_Y-40);
+      ctx.moveTo(SLING_X+15, SLING_Y+40);
+      ctx.lineTo(SLING_X+15, SLING_Y-40);
+      ctx.stroke();
+      ctx.restore();
+      // Rubber band
+      if (!launched && currentBird && dragging) {
+        ctx.save();
+        ctx.strokeStyle = '#a00';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(SLING_X-15, SLING_Y-40);
+        ctx.lineTo(currentBird.x, currentBird.y);
+        ctx.lineTo(SLING_X+15, SLING_Y-40);
+        ctx.stroke();
+        ctx.restore();
+      }
+      // Trajectory preview
+      if (!launched && currentBird && dragging) {
+        let dx = SLING_X - currentBird.x, dy = SLING_Y - currentBird.y;
+        let power = Math.sqrt(dx*dx + dy*dy) * 0.28;
+        let angle = Math.atan2(dy, dx);
+        let tx = currentBird.x, ty = currentBird.y, vx = dx*0.28, vy = dy*0.28;
+        ctx.save();
+        ctx.strokeStyle = '#fff';
+        ctx.setLineDash([4,4]);
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        for (let i=0; i<30; ++i) {
+          vx *= 0.98;
+          vy += GRAVITY;
+          tx += vx;
+          ty += vy;
+          ctx.lineTo(tx, ty);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+    }
+
+    // --- INPUT ---
+    canvas.addEventListener('mousedown', e => {
+      if (win || launched || birdsLeft <= 0) return;
+      let rect = canvas.getBoundingClientRect();
+      let mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      let dx = mx - currentBird.x, dy = my - currentBird.y;
+      if (dx*dx + dy*dy < BIRD_RADIUS*BIRD_RADIUS*2) {
+        dragging = true;
+        dragStart = {x: mx, y: my};
+      }
+    });
+    canvas.addEventListener('mousemove', e => {
+      if (!dragging || launched) return;
+      let rect = canvas.getBoundingClientRect();
+      let mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      let dx = mx - SLING_X, dy = my - SLING_Y;
+      let dist = Math.sqrt(dx*dx + dy*dy);
+      let maxDist = 180; // 기존 90에서 180으로 증가
+      if (dist > maxDist) {
+        let angle = Math.atan2(dy, dx);
+        mx = SLING_X + Math.cos(angle)*maxDist;
+        my = SLING_Y + Math.sin(angle)*maxDist;
+      }
+      currentBird.x = mx;
+      currentBird.y = my;
+    });
+    canvas.addEventListener('mouseup', e => {
+      if (!dragging || launched) return;
+      dragging = false;
+      let dx = SLING_X - currentBird.x, dy = SLING_Y - currentBird.y;
+      currentBird.vx = dx * 0.28; // 기존 0.15에서 0.28로 증가
+      currentBird.vy = dy * 0.28;
+      currentBird.launched = true;
+      launched = true;
+      setTimeout(() => {
+        birdsLeft--;
+        document.getElementById('birdsLeft').textContent = birdsLeft;
+        // Next bird
+        let next = birds.find(b => !b.launched && b.alive);
+        if (next) {
+          currentBird = next;
+          currentBird.x = SLING_X;
+          currentBird.y = SLING_Y;
+          launched = false;
+        }
+      }, 2000);
+    });
+
+    // --- MAIN LOOP ---
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+    resetGame();
+    loop();
+  </script>
+</body>
+</html> 
